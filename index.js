@@ -48,6 +48,20 @@ async function run() {
         res.send(result);
       }
     });
+    // get all users data------------
+    app.get("/allUsers", async (req, res) => {
+      const cursor = userCollections.find();
+      const result = await cursor.toArray();
+      res.send(result);
+    });
+    // create delete user-------------
+    app.delete("/allUsers/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await userCollections.deleteOne(query);
+      res.send(result);
+    });
+    // menu api
     // get menu data--------
     app.get("/menu", async (req, res) => {
       const cursor = menuCollections.find();

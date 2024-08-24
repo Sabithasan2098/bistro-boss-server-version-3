@@ -1,5 +1,6 @@
 const { ObjectId } = require("mongodb");
 const express = require("express");
+const jwt = require("jsonwebtoken");
 const app = express();
 const cors = require("cors");
 require("dotenv").config();
@@ -35,6 +36,42 @@ async function run() {
     const cartsCollections = client.db("bistroDB").collection("carts");
 
     // api------------------
+    // jwt related api-------------
+    // JWT Token Generation
+    app.post("/jwt", (req, res) => {
+      const user = req.body;
+      const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
+        expiresIn: "1h", // Expires in 1 hour
+      });
+      res.send({ token });
+    });
+
+    // JWT Middleware
+    const verifyToken = (req, res, next) => {
+      if (!req.headers.authorization) {
+        return res.status(401).send({ message: "Unauthorized access" });
+      }
+
+      const token = req.headers.authorization.split(" ")[1]; // Extract the token
+      jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+        if (err) {
+          return res.status(401).send({ message: "Unauthorized access" });
+        }
+        req.decoded = decoded; // Correct assignment
+        next(); // Proceed to the next middleware or route handler
+      });
+    };
+    // isAdmin middleware----------
+    const verifyAdmin = async (req, res, next) => {
+      const email = req.decoded.email;
+      const query = { email: email };
+      const user = await userCollections.findOne(query);
+      const isAdmin = user?.role === "admin";
+      if (!isAdmin) {
+        return res.status(403).send({ message: "Forbidden access" });
+      }
+      next();
+    };
     // post unique user data-------
     app.post("/users", async (req, res) => {
       const user = req.body;
@@ -49,29 +86,47 @@ async function run() {
       }
     });
     // get all users data------------
-    app.get("/allUsers", async (req, res) => {
-      const cursor = userCollections.find();
-      const result = await cursor.toArray();
+    app.get("/allUsers", verifyToken, verifyAdmin, async (req, res) => {
+      const result = await userCollections.find().toArray();
       res.send(result);
     });
     // create delete user-------------
-    app.delete("/allUsers/:id", async (req, res) => {
+    app.delete("/allUsers/:id", verifyToken, verifyAdmin, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await userCollections.deleteOne(query);
       res.send(result);
     });
     // update role of an user------
-    app.patch("/allUsers/admin/:id", async (req, res) => {
-      const id = req.params.id;
-      const filter = { _id: new ObjectId(id) };
-      const updatedDoc = {
-        $set: {
-          role: "admin",
-        },
-      };
-      const result = await userCollections.updateOne(filter, updatedDoc);
-      res.send(result);
+    app.patch(
+      "/allUsers/admin/:id",
+      verifyToken,
+      verifyAdmin,
+      async (req, res) => {
+        const id = req.params.id;
+        const filter = { _id: new ObjectId(id) };
+        const updatedDoc = {
+          $set: {
+            role: "admin",
+          },
+        };
+        const result = await userCollections.updateOne(filter, updatedDoc);
+        res.send(result);
+      }
+    );
+    // check admin api-----
+    app.get("/allUsers/admin/:email", verifyToken, async (req, res) => {
+      const email = req.params.email;
+      if (email !== req.decoded.email) {
+        return res.status(403).send({ message: "Forbidden access" });
+      }
+      const query = { email: email };
+      const user = await userCollections.findOne(query);
+      let admin = false;
+      if (user) {
+        admin = user?.role === "admin";
+      }
+      res.send({ admin });
     });
     // menu api
     // get menu data--------

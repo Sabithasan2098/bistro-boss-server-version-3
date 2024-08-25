@@ -129,6 +129,12 @@ async function run() {
       res.send({ admin });
     });
     // menu api
+    // post a menu data-----
+    app.post("/menu", verifyToken, verifyAdmin, async (req, res) => {
+      const item = req.body;
+      const result = await menuCollections.insertOne(item);
+      res.send(result);
+    });
     // get menu data--------
     app.get("/menu", async (req, res) => {
       const cursor = menuCollections.find();

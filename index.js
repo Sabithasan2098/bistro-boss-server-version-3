@@ -142,6 +142,13 @@ async function run() {
       res.send(result);
     });
     // ---------------------
+    // get menu data by id--
+    app.get("/menu/:id", verifyToken, verifyAdmin, async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await menuCollections.findOne(query);
+      res.send(result);
+    });
     // delete a menu item---
     app.delete("/menu/:id", verifyToken, verifyAdmin, async (req, res) => {
       const id = req.params.id;
@@ -150,7 +157,7 @@ async function run() {
       res.send(result);
     });
     // reviews api
-    // get menu data--------
+    // get reviews data--------
     app.get("/reviews", async (req, res) => {
       const cursor = reviewsCollections.find();
       const result = await cursor.toArray();

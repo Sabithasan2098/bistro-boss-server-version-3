@@ -1,4 +1,4 @@
-const { ObjectId } = require("mongodb");
+const { ObjectId, BSON } = require("mongodb");
 const express = require("express");
 const jwt = require("jsonwebtoken");
 const app = express();
@@ -143,7 +143,7 @@ async function run() {
     });
     // ---------------------
     // get menu data by id--
-    app.get("/menu/:id", verifyToken, verifyAdmin, async (req, res) => {
+    app.get("/menu/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await menuCollections.findOne(query);
@@ -154,6 +154,23 @@ async function run() {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await menuCollections.deleteOne(query);
+      res.send(result);
+    });
+    // update menu item
+    app.patch("/menu/:id", async (req, res) => {
+      const item = req.body;
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const updatedDoc = {
+        $set: {
+          name: item.name,
+          recipe: item.recipe,
+          image: item.image,
+          category: item.category,
+          price: item.price,
+        },
+      };
+      const result = await menuCollections.updateOne(filter, updatedDoc);
       res.send(result);
     });
     // reviews api

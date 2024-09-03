@@ -252,6 +252,37 @@ async function run() {
       const result = await paymentCollections.find(query).toArray();
       res.send(result);
     });
+
+    // stats or analythics------------------------for admin------->
+
+    app.get("/admin-stats", verifyToken, verifyAdmin, async (req, res) => {
+      const users = await userCollections.estimatedDocumentCount();
+      const menuItems = await menuCollections.estimatedDocumentCount();
+      const orders = await paymentCollections.estimatedDocumentCount();
+
+      // get the revinue
+      // const payments = await paymentCollections.find().toArray();
+      // const revinue = payments.reduce(
+      //   (total, payment) => total + payment.price,
+      //   0
+      // );
+      // latest system------------------------->
+      const payments = await paymentCollections
+        .aggregate([
+          {
+            $group: {
+              _id: null,
+              totalRevinue: { $sum: "$price" },
+            },
+          },
+        ])
+        .toArray();
+
+      const revinue = payments[0]?.totalRevinue || 0;
+
+      res.send({ users, menuItems, orders, revinue });
+    });
+
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log(
